@@ -11,7 +11,7 @@
  left=20mm,
  top=20mm,
  }
-\author{John Walmsley, Gary R. Mirams}
+\author{John Walmsley, Gary R.~Mirams}
 \title{Predicting simulation-experiment discrepancy in cell-specific cardiac electrophysiology models}
 
 \newcommand{\norm}[1]{\left\lVert#1\right\rVert}
@@ -22,6 +22,13 @@
 
 \section{Introduction}
 
+Acquired Long QT syndrome (aLQTS) leading to potentially lethal torsade de pointes arrhythmias has been a rare complication of pharmaceutical treatment with serious consequences for patients, clinicians, regulators and pharmaceutical companies. At present, screening for pro-arrhythmic side effects is performed using the Thorough QT study. This study is extremely sensitive but highly aspecific, leading to the likely removal of many safe compounds at early stages of drug development, increasing costs of development and reducing the number of beneficial compounds that can be taken forwards through the drug development pipeline.
+
+In response to the present unsatisfactory situation, the United States Food \& Drug Administration (FDA) has launched the Comprehensive {\it{in vitro} Pharmaceutical Assay (CiPA) project in collaboration with academic researchers, safety pharmacologists and key regulatory bodies. CiPA aims to improve or replace existing screening methods with assays that use computational cardiac cell models representing human cardiac electrophysiology and/or human induced pluripotent stem cell-derived cardiomyocytes. A particular focus of the CiPA project is characterisation of the activation and drug binding kinetics of the hERG channel, which carries the crucial rapidly activating delayed rectifier potassium current (I$_{\text{Kr}}$). I$_{\text{Kr}}$ is a key component of cardiac repolarization and is commonly implicated in aLQTS.
+
+As part of the CiPA initiative, Beattie \it{et al} recently published a novel method for fitting hERG channel kinetics on a cell-specific basis that uses a novel `sine wave' voltage clamp protocol as training data to parameterise a simple model of the hERG channel. This model has four `states' and is analogous to the Hodgkin-Huxley potassium current model. The resultant fits produced an excellent qualitative fit to prediction data based on a combination of action potential voltage waveforms. The resultant parameterized model outperformed existing characterisations of IKr extant in the modelling literature with a range of different model structures. Consequently, this new method for characterizing hERG channel kinetics is highly promising for the CiPA project, as it offers a way to characterise recorded kinetics from high-throughput data, while requiring a fraction of the data (and hence recording time) required by long traditional step protocols which can require multiple cells to parameterise adequately, which may be prohibitive for applications which also require characterisation of channel kinetics in presence of pharmaceutical agents.
+
+To advance this promising model parameterisation approach further for application in pharmaceutical development pipelines, several key issues still need to be addressed. Namely 1) can we quantify our certainty in the predictions of the parameterised model, and 2) does the discrepancy between the parameterised model and the experimental data arise due to an inadequate model structure, or an inadequate parameterisation of the model? This report descibes attempts to address these questions using regression methods.
 
 \section{Models of the hERG Channel} \label{}
 
@@ -84,7 +91,7 @@ The CVODES libraries are used to integrate the parameter sensitivity equations a
 Before performing any estimation, we check for linear dependence of each set of properties in turn, then check for linear dependence of all the properties that remain. The linear independence check is numerical and performed using the Mathworks File Exchange program getLinearDependent.m. Note that we did not include the derivatives of the variables ($\frac{dy_i}{dt}$ because they are linear combinations of the fluxes.
 
 \subsection{Experimental Data}
-For the purposes of this study we restricted ourselves to one cell from the study by \cite{}, the `middle' cell in terms of quality that is used in most of the plots in that paper. This is cell number 16713110. A number of experimental voltage protocols are used in this study. The main focus is on the `sine wave' (SW) and `action potential' (AP) protocols used by Beattie \textit{et al}\cite{Beattie2018}. However, we also used some other protocols recorded during data collection for this study, namely the `Original Sine Wave' (OSW), `Equal Proportions' (EP), and `Mazahari-Wang Difference' (MWDD) protocols. All protocols used and the corresponding experimentally recorded current are shown in Fig.~\ref{Fig_Protocols}. For the purposes of fitting, all capacitance spikes were removed as in Beattie \textit{et al}\cite{Beattie2018}.
+For the purposes of this study we restricted ourselves to one cell from the study by \cite{}, the `middle' cell in terms of quality that is used in most of the plots in that paper. This cell has cell identifier 16713110. A number of experimental voltage protocols are used in this study. The main focus is on the `sine wave' (SW) and `action potential' (AP) protocols used by Beattie \textit{et al}\cite{Beattie2018}. However, we also used some other protocols recorded during data collection for this study, namely the `Original Sine Wave' (OSW), `Equal Proportions' (EP), and `Mazahari-Wang Difference' (MWDD) protocols. All protocols used and the corresponding experimentally recorded current are shown in Fig.~\ref{Fig_Protocols}. For the purposes of fitting, all capacitance spikes were removed as in Beattie \textit{et al}\cite{Beattie2018}.
 
 \begin{figure}[t]
 \begin{center}
@@ -97,15 +104,15 @@ For the purposes of this study we restricted ourselves to one cell from the stud
 \subsection{Predicting Discrepancy Using LASSO}\label{SubSec_Lasso_Discrepancy}
 
 \subsubsection{The Method}
-The Least Absolute Shrinkage and Selection Operator (LASSO) is a popular linear regression method that incorporates a regularization parameter $\lambda$. For a set of predictors $X$, $N$ data points $y$ and coefficients $\beta$, the LASSO method can be written in Lagrangian form as
+The Least Absolute Shrinkage and Selection Operator (LASSO)\footnote{\url{https://www.mathworks.com/help/stats/lasso.html}} is a popular linear regression method that incorporates a regularization parameter $\lambda$. For a set of predictors $X$, $N$ data points $y$ and coefficients $\beta$, the LASSO method can be written in Lagrangian form as
 \begin{align}
 	\min_{\beta} ( \frac{1}{N} \norm{ y - \beta X }^2 + \lambda \norm{ \beta }^1 ).
 \end{align}
 The size of the parameter $\lambda$ determines the degree of regularization. Essentially, a large $\lambda$ penalizes $\beta$ heavily, and so produces smaller models. Conversely, a small $\lambda$ allows the method more freedom in the number of variables included. A key feature of the LASSO algorithm is that due to the $L_1$ norm used for regularization, elements of $\beta$ can be set to zero by the method, resulting in smaller models. This key property has made LASSO a popular method in Machine Learning. Variations on this method are Ridge regression (uses $\lambda \norm{ \beta }^2$ instead) and Elastic Net regression (a combination of Ridge and LASSO).
 
-One challenge of the LASSO method is that there is no a priori choice for the regularization parameter $\lambda$. To determine $\lambda$ and check the validity of the resulting models we use K-fold cross-validation. This method works by splitting the experimental data into K equally sized folds, leaving one out, then checking the model's ability to predict the data in the left out fold. This results in an MSE for each fold, and for each value of $\lambda$. The variation in the MSE at each $lambda$ can be used to select $\lambda$ and hence, the model. To do so, we find the $\lambda$ value giving the minimum MSE, and then choose the largest $\lambda$ within one standard deviation from this point. This can be seen as choosing the smallest justifiable  model within the variation of the model that gives the absolute minium error. In this study, we use 10 folds which is a fairly standard choice.
+One challenge of the LASSO method is that there is no a priori choice for the regularization parameter $\lambda$. To determine $\lambda$ and check the validity of the resulting models we use K-fold cross-validation. This method works by splitting the experimental data into K equally sized folds, leaving one out, then checking the model's ability to predict the data in the left out fold. This results in a mean squared error (MSE) for each fold, and for each value of $\lambda$. The variation in the MSE at each $lambda$ can be used to select $\lambda$ and hence, the model. To do so, we find the $\lambda$ value giving the minimum MSE, and then choose the largest $\lambda$ within one standard deviation from this point. This can be seen as choosing the smallest justifiable  model within the variation of the model that gives the absolute minium error. In this study, we use 10 folds which is a fairly standard choice.
 
-An important property of K-fold cross-validation as inplemented in Matlab is that it uses random data points in each fold. While this is in principle a good thing, the extremely high time resolution of our data means that all of the resulting folds are likely to  be effectively the same, subject to experimental noise (see Fig.~\ref{}). As a result, the models produced by the Matlab algorithm were both non-predictive and non-deterministic. To correct for this, some editing of the Matlab source code is required (detailed in README.md). We instead split the trace into ten equal segments consecutive in time to ensure variation between folds.
+An important property of K-fold cross-validation as inplemented in Matlab is that it uses random data points in each fold. While this is in principle a good thing, the extremely high time resolution of our data means that all of the resulting folds are likely to  be effectively the same, subject to experimental noise (see Fig.~\ref{}). As a result, the models produced by the Matlab algorithm were both non-predictive and non-deterministic. To correct for this phenomenon and produce meaningful folds, some editing of the Matlab source code is required (detailed in README.md). We instead split the trace into ten equal segments consecutive in time to ensure variation between folds.
 
 \subsubsection{Results}
 
@@ -114,38 +121,40 @@ LASSO fits for a linear regression model of model discrepancy of $d$ and $d_o$ a
 \begin{figure}[t]
 \begin{center}
 \includegraphics[scale=0.42]{Figures/LASSO_SW_AP_full_discrepancy.png}
-\caption{\textbf{Linear model of discrepancy constructed using LASSO.} These models of $d$ (left) and $d_o$ (right) were constructed using LASSO on the entire SW trace (top), starting with all linearly independent predictors. The improvement of the training trace (top) is poor and the resulting models fail to predict the discrepancy in the AP trace (bottom). The root mean square errors between the simulated and predicted traces are shown in the legends. } 
+\caption{\textbf{Linear model of discrepancy constructed using LASSO from the SW protocol.} These models of $d$ (left) and $d_o$ (right) were constructed using LASSO on the entire SW trace (top), starting with all linearly independent predictors. The improvement of the training trace (top) is poor and the resulting models fail to predict the discrepancy in the AP trace (bottom). The root mean square errors between the simulated and predicted traces are shown in the legends. } 
 \label{Fig_LASSO_SW_AP_full_discrepancy}
 \end{center}
 \end{figure}
 
 \begin{figure}[hbt]
 \begin{center}
-\includegraphics[scale=0.42]{Figures/LASSO_SW_AP_full_discrepancy.png}
-\caption{\textbf{Corrected currents using a constructed linear model of discrepancy.} These models of $d$ (left) and $d_o$ (right) in Fig. ~\ref{} have been incorporated into the simulating, giving a revised prediction for the SW and AP protocols. As expected from Fig.~\ref{Fig_LASSO_SW_AP_full_discrepancy}, there is little improvement.}
+\includegraphics[scale=0.42]{Figures/LASSO_SW_AP_full_currents.png}
+\caption{\textbf{Corrected currents using a linear model of discrepancy constructed using LASSO from the SW protocol.} The models of $d$ (left) and $d_o$ (right) in Fig. ~\ref{Fig_LASSO_SW_AP_full_discrepancy} have been incorporated into the simulation (blue line), giving a revised prediction for the SW and AP protocols (black line). As expected from Fig.~\ref{Fig_LASSO_SW_AP_full_discrepancy}, there is little improvement in the agreement with the experimental data (red line). The sum of squared errors between the models and the data are shown in the legend.}
 \label{Fig_LASSO_SW_AP_full_currents}
 \end{center}
 \end{figure}
 
-Included parameters and their coefficients are shown in Fig.~\ref{Fig_LASSO_SW_AP_coefficients}. The parameters differ considerably between the models for $d$ and $d_o$. Fig.~\ref{Fig_LASSO_SW_AP_lambda} shows the plot of $\lambda$ as a function of MSE. The model with the minimum MSE is indicated by the green line and the model with the largest value of $\lambda$ (hence, the smallest model) within one standard error of the minimum MSE model is shown by the blue line. 
+Included parameters and their coefficients are shown in Fig.~\ref{Fig_LASSO_SW_AP_coefficients}. The parameters differ considerably between the models for $d$ and $d_o$. Fig.~\ref{Fig_LASSO_SW_AP_lambda} shows the plot of $\lambda$ as a function of MSE. The model with the minimum MSE is indicated by the green line and the model with the largest value of $\lambda$ (hence, the smallest model) within one standard error of the minimum MSE model is shown by the blue line. Note the characteristic U-shaped form of the $\lambda$ - MSE relationship, with overfitting on the right and underfitting on the left.
 
 \begin{figure}[t]
 \begin{center}
-\includegraphics[scale=0.42]{Figures/LASSO_SW_AP_full_discrepancy.png}
-\caption{\textbf{Coefficients in the linear model of discrepancy constructed using LASSO.} These models of $d$ (left) and $d_o$ (right) were constructed using LASSO on the entire SW trace (top), starting with all linearly independent predictors. The improvement of the training trace (top) is poor and the resulting models fail to predict the discrepancy in the AP trace (bottom). The root mean square errors between the simulated and predicted traces are shown in the legends. } 
+\includegraphics[scale=0.42]{Figures/LASSO_SW_AP_full_coefficients.png}
+\caption{\textbf{Coefficients in the linear model of discrepancy constructed using LASSO from the SW protocol.} This plot shows the included parameters and coefficients for the model produced by LASSO shown in Fig.~\ref{Fig_LASSO_SW_AP_full_discrepancy} and Fig.~\ref{Fig_LASSO_SW_AP_full_currents}. Coefficients for $d$ are shown on the left, and coefficients for $d_o$ are shown on the right.} 
 \label{Fig_LASSO_SW_AP_coefficients}
 \end{center}
 \end{figure}
 
 \begin{figure}[hbt]
 \begin{center}
-\includegraphics[scale=0.42]{Figures/LASSO_SW_AP_full_discrepancy.png}
-\caption{\textbf{Corrected currents using a constructed linear model of discrepancy.} These models of $d$ (left) and $d_o$ (right) in Fig. ~\ref{} have been incorporated into the simulating, giving a revised prediction for the SW and AP protocols. As expected from Fig.~\ref{Fig_LASSO_SW_AP_full_discrepancy}, there is little improvement.}
+\includegraphics[scale=0.42]{Figures/LASSO_SW_AP_full_lambda.png}
+\caption{\textbf{$\lambda$ and Mean Squared Error plots from the linear models of the SW protocol.} The models of $d$ (left) and $d_o$ (right) have been generated by varying $\lambda$. The error bars indicate the standard error in the MSE between folds. The value of $\lambda$ giving the minimum MSE is indicated by the green line and the selected value of $\lambda$, being the largest value of $\lambda$ with an MSE within one standard error of the minimum, is shown in blue. Note that $\lambda$ runs from largest to smallest, so that the largest model is on the left.}
 \label{Fig_LASSO_SW_AP_lambda}
 \end{center}
 \end{figure}
 
-Based on the failure of the `naive' LASSO method in this case, we also addressed the following hypotheses:
+\clearpage
+
+Based on the failure of the `naive' LASSO method in this standard case, we also addressed the following hypotheses:
 \begin{itemize}
 \item the LASSO method might be biased by the large errors that occur in the deactivation steps, and so fail to fit the more subtle errors in the main part of the trace.
 \item Because the fit to the SW protocol is `optimal' and  extremely good, there may simply not be enough information in the discrepancy of the sine wave protocol to train a model.
@@ -153,13 +162,167 @@ Based on the failure of the `naive' LASSO method in this case, we also addressed
 
 To address the first hypothesis, we tried fitting a model to only the sine wave generated part of the SW protocol, and omit the activation and deactivation steps on either end (see Fig.~\ref{Fig_Protocols}). These were then used to predict only the section of the AP protocol containing the action potentials. To address the second hypothesis, we instead trained the models using alternative protocols (OSW, EP, MWDD) that were recorded during the course of the sine wave protocol study. Results for each of these approaches are shown in Fig.~\ref{}-\ref{}. In each case, the linear model of discrepancy only provides marginal gains in the training data, and either fails to improve the discrepancy in the prediction (AP) trace or makes it worse. In general, across all sets of results, the discrepancy in the open probability, $d_o$, appears to be both harder to predict and lead to more over-fitting than the standard definition, $d$.
 
-\subsection{Predicting Discrepancy Using StepwiseLM}\label{SubSec_StepwiseLM_Discrepancy}
+To investigate what the `best possible' model would look like, we also constructed a model from our prediction data, namely the discrepancy in the AP protocol. The quality of this fit effectively places an upper bound on the success of the LASSO procedure for constructing a linear model of the data we wish to predict. This model is shown in Figs.~\ref{Fig_LASSO_SW_AP_core_discrepancy}-\ref{Fig_LASSO_OSW_AP_core_lambda}. Whilst this model produces an appreciable improvement in the agreement between data and model, this result suggests that a linear regression approach would only ever be able to account for a sub-portion of the discrepancy observed between simulation and experiment.
+
+\begin{figure}[t]
+\begin{center}
+\includegraphics[scale=0.42]{Figures/LASSO_SW_AP_core_discrepancy.png}
+\caption{\textbf{Linear model of discrepancy constructed using LASSO.} These models of $d$ (left) and $d_o$ (right) were constructed using LASSO on the entire SW trace (top), starting with all linearly independent predictors. The root mean square errors between the simulated and predicted traces are shown in the legends. } 
+\label{Fig_LASSO_SW_AP_core_discrepancy}
+\end{center}
+\end{figure}
+
+\begin{figure}[hb]
+\begin{center}
+\includegraphics[scale=0.42]{Figures/LASSO_SW_AP_core_currents.png}
+\caption{\textbf{Corrected currents using a linear model of discrepancy constructed using LASSO from the sine wave generated component of the SW protocol.} The models of $d$ (left) and $d_o$ (right) in Fig.~\ref{Fig_LASSO_SW_AP_core_discrepancy} have been incorporated into the simulation (blue line), giving a revised prediction for the SW and AP protocols (black line). The sum of squared errors between the models and the data are shown in the legend.}
+\label{Fig_LASSO_SW_AP_core_currents}
+\end{center}
+\end{figure}
+
+\clearpage
+
+\begin{figure}[t]
+\begin{center}
+\includegraphics[scale=0.42]{Figures/LASSO_SW_AP_core_coefficients.png}
+\caption{\textbf{Coefficients in the linear model of discrepancy constructed using LASSO from the sine wave generated component of the SW protocol.} This plot shows the included parameters and coefficients for the model produced by LASSO shown in Fig.~\ref{Fig_LASSO_SW_AP_core_discrepancy} and Fig.~\ref{Fig_LASSO_SW_AP_core_currents}. Coefficients for $d$ are shown on the left, and coefficients for $d_o$ are shown on the right.} 
+\label{Fig_LASSO_SW_AP_core_coefficients}
+\end{center}
+\end{figure}
+
+\begin{figure}[hb]
+\begin{center}
+\includegraphics[scale=0.42]{Figures/LASSO_SW_AP_core_lambda.png}
+\caption{\textbf{$\lambda$ and Mean Squared Error plots from the linear models of the sine wave component of the SW protocol.} The models of $d$ (left) and $d_o$ (right) have been generated by varying $\lambda$. The error bars indicate the standard error in the MSE between folds. The value of $\lambda$ giving the minimum MSE is indicated by the green line and the selected value of $\lambda$, being the largest value of $\lambda$ with an MSE within one standard error of the minimum, is shown in blue. Note that $\lambda$ runs from largest to smallest, so that the largest model is on the left.}}
+\label{Fig_LASSO_SW_AP_core_lambda}
+\end{center}
+\end{figure}
+
+\clearpage
+
+\begin{figure}[t]
+\begin{center}
+\includegraphics[scale=0.42]{Figures/LASSO_EP_AP_full_discrepancy.png}
+\caption{\textbf{Linear model of discrepancy constructed using LASSO from the EP protocol.} These models of $d$ (left) and $d_o$ (right) were constructed using LASSO on the entire SW trace (top), starting with all linearly independent predictors. The root mean square errors between the simulated and predicted traces are shown in the legends. } 
+\label{Fig_LASSO_EP_AP_full_discrepancy}
+\end{center}
+\end{figure}
+
+\begin{figure}[hb]
+\begin{center}
+\includegraphics[scale=0.42]{Figures/LASSO_EP_AP_full_currents.png}
+\caption{\textbf{Corrected currents using a linear model of discrepancy constructed using LASSO from the EP protocol.} The models of $d$ (left) and $d_o$ (right) in Fig. ~\ref{Fig_LASSO_SW_AP_full_discrepancy} have been incorporated into the simulation (blue line), giving a revised prediction for the EP and AP protocols (black line). The sum of squared errors between the models and the data are shown in the legend.}
+\label{Fig_LASSO_EP_AP_full_currents}
+\end{center}
+\end{figure}
+
+\clearpage
+
+\begin{figure}[t]
+\begin{center}
+\includegraphics[scale=0.42]{Figures/LASSO_EP_AP_full_coefficients.png}
+\caption{\textbf{Coefficients in the linear model of discrepancy constructed using LASSO from the sine wave generated component of the EP protocol.} This plot shows the included parameters and coefficients for the model produced by LASSO shown in Fig.~\ref{Fig_LASSO_EP_AP_core_discrepancy} and Fig.~\ref{Fig_LASSO_EP_AP_core_currents}. Coefficients for $d$ are shown on the left, and coefficients for $d_o$ are shown on the right.} 
+\label{Fig_LASSO_EP_AP_core_coefficients}
+\end{center}
+\end{figure}
+
+\begin{figure}[hb]
+\begin{center}
+\includegraphics[scale=0.42]{Figures/LASSO_EP_AP_full_lambda.png}
+\caption{\textbf{$\lambda$ and Mean Squared Error plots from the linear models of the sine wave component of the EP protocol.} The models of $d$ (left) and $d_o$ (right) have been generated by varying $\lambda$. The error bars indicate the standard error in the MSE between folds. The value of $\lambda$ giving the minimum MSE is indicated by the green line and the selected value of $\lambda$, being the largest value of $\lambda$ with an MSE within one standard error of the minimum, is shown in blue. Note that $\lambda$ runs from largest to smallest, so that the largest model is on the left.}}
+\label{Fig_LASSO_EP_AP_core_lambda}
+\end{center}
+\end{figure}
+
+\clearpage
+
+\begin{figure}[t]
+\begin{center}
+\includegraphics[scale=0.42]{Figures/LASSO_MWDD_AP_full_discrepancy.png}
+\caption{\textbf{Linear model of discrepancy constructed using LASSO from the MWDD protocol.} These models of $d$ (left) and $d_o$ (right) were constructed using LASSO on the entire MWDD trace (top), starting with all linearly independent predictors. The root mean square errors between the simulated and predicted traces are shown in the legends. } 
+\label{Fig_LASSO_MWDD_AP_full_discrepancy}
+\end{center}
+\end{figure}
+
+\begin{figure}[hb]
+\begin{center}
+\includegraphics[scale=0.42]{Figures/LASSO_MWDD_AP_full_currents.png}
+\caption{\textbf{Corrected currents using a linear model of discrepancy constructed using LASSO from the MWDD protocol.} The models of $d$ (left) and $d_o$ (right) in Fig. ~\ref{Fig_LASSO_MWDD_AP_full_discrepancy} have been incorporated into the simulation (blue line), giving a revised prediction for the MWDD and AP protocols (black line). The sum of squared errors between the models and the data are shown in the legend.}
+\label{Fig_LASSO_MWDD_AP_full_currents}
+\end{center}
+\end{figure}
+
+\clearpage
+
+\begin{figure}[t]
+\begin{center}
+\includegraphics[scale=0.42]{Figures/LASSO_MWDD_AP_full_coefficients.png}
+\caption{\textbf{Coefficients in the linear model of discrepancy constructed using LASSO from the sine wave generated component of the MWDD protocol.} This plot shows the included parameters and coefficients for the model produced by LASSO shown in Fig.~\ref{Fig_LASSO_MWDD_AP_core_discrepancy} and Fig.~\ref{Fig_LASSO_MWDD_AP_core_currents}. Coefficients for $d$ are shown on the left, and coefficients for $d_o$ are shown on the right.} 
+\label{Fig_LASSO_MWDD_AP_core_coefficients}
+\end{center}
+\end{figure}
+
+\begin{figure}[hb]
+\begin{center}
+\includegraphics[scale=0.42]{Figures/LASSO_MWDD_AP_full_lambda.png}
+\caption{\textbf{$\lambda$ and Mean Squared Error plots from the linear models of the sine wave component of the MWDD protocol.} The models of $d$ (left) and $d_o$ (right) have been generated by varying $\lambda$. The error bars indicate the standard error in the MSE between folds. The value of $\lambda$ giving the minimum MSE is indicated by the green line and the selected value of $\lambda$, being the largest value of $\lambda$ with an MSE within one standard error of the minimum, is shown in blue. Note that $\lambda$ runs from largest to smallest, so that the largest model is on the left.}}
+\label{Fig_LASSO_MWDD_AP_core_lambda}
+\end{center}
+\end{figure}
+
+\clearpage
+
+\begin{figure}[t]
+\begin{center}
+\includegraphics[scale=0.42]{Figures/LASSO_OSW_AP_full_discrepancy.png}
+\caption{\textbf{Linear model of discrepancy constructed using LASSO from the OSW protocol.} These models of $d$ (left) and $d_o$ (right) were constructed using LASSO on the entire OSW trace (top), starting with all linearly independent predictors. The root mean square errors between the simulated and predicted traces are shown in the legends. } 
+\label{Fig_LASSO_OSW_AP_full_discrepancy}
+\end{center}
+\end{figure}
+
+\begin{figure}[hb]
+\begin{center}
+\includegraphics[scale=0.42]{Figures/LASSO_OSW_AP_full_currents.png}
+\caption{\textbf{Corrected currents using a linear model of discrepancy constructed using LASSO from the MWDD protocol.} The models of $d$ (left) and $d_o$ (right) in Fig. ~\ref{Fig_LASSO_MWDD_AP_full_discrepancy} have been incorporated into the simulation (blue line), giving a revised prediction for the MWDD and AP protocols (black line). The sum of squared errors between the models and the data are shown in the legend.}
+\label{Fig_LASSO_MWDD_AP_full_currents}
+\end{center}
+\end{figure}
+
+\clearpage
+
+\begin{figure}[t]
+\begin{center}
+\includegraphics[scale=0.42]{Figures/LASSO_OSW_AP_full_coefficients.png}
+\caption{\textbf{Coefficients in the linear model of discrepancy constructed using LASSO from the sine wave generated component of the OSW protocol.} This plot shows the included parameters and coefficients for the model produced by LASSO shown in Fig.~\ref{Fig_LASSO_MWDD_AP_core_discrepancy} and Fig.~\ref{Fig_LASSO_OSW_AP_core_currents}. Coefficients for $d$ are shown on the left, and coefficients for $d_o$ are shown on the right.} 
+\label{Fig_LASSO_OSW_AP_core_coefficients}
+\end{center}
+\end{figure}
+
+\begin{figure}[hb]
+\begin{center}
+\includegraphics[scale=0.42]{Figures/LASSO_OSW_AP_full_lambda.png}
+\caption{\textbf{$\lambda$ and Mean Squared Error plots from the linear models of the sine wave component of the OSW protocol.} The models of $d$ (left) and $d_o$ (right) have been generated by varying $\lambda$. The error bars indicate the standard error in the MSE between folds. The value of $\lambda$ giving the minimum MSE is indicated by the green line and the selected value of $\lambda$, being the largest value of $\lambda$ with an MSE within one standard error of the minimum, is shown in blue. Note that $\lambda$ runs from largest to smallest, so that the largest model is on the left.}}
+\label{Fig_LASSO_OSW_AP_core_lambda}
+\end{center}
+\end{figure}
+
+\clearpage
+
+\subsection{Predicting Discrepancy Using Stepwise Linear Model}\label{SubSec_StepwiseLM_Discrepancy}
 \subsubsection{The Method}
-Stepwise Linear Model (StepwiseLM) is a Matlab method ...
+Stepwise Linear Model (StepwiseLM) is a Matlab method for constructing linear models using a stepwise approach\footnote{\url{https://www.mathworks.com/help/stats/stepwiselm.html}}. The method includes predictors in a stepwise manner by first building  up a model by examining all non-included predictors, checking if any have a $p$-value below a set entrance tolerance, then including the predictor with the smallest $p$-value in the model. Once no more terms can be added to the model, the reverse process is applied and terms are removed from the model if they exceed a removal $p$-value. Further terms are then added as before. The final model is then produced when no more predictors can be removed from the model. The method also allows for higher order terms such as interactions and quadratic terms. Initial experiments showed that this approach led to high degrees of overfitting and so was rejected. A number of criteria are available for setting the threshold for including predictors into the model, being
+\begin{itemize}
+\item Aikake Information Criterion (AIC)
+
+\end{itemize}
+In this study we used AIC with . 
+
+
+
 \subsubsection{Results}
 
 \subsection{Artificial Data}
-
+Given the disappointing results in Sections \ref{SubSec_Lasso_Discrepancy} and \ref{SubSec_StepwiseLM_Discrepancy} above, we performed a set of test studies 
 \subsection{Conclusions}
 
 
@@ -170,6 +333,10 @@ Stepwise Linear Model (StepwiseLM) is a Matlab method ...
 \section{Future Work}
 
 \section{Acknowledgements}
-We would like to thank Dr.~Simon Preston and Dr.~Theo Kypraios (University of Nottingham) for useful discussions on LASSO and K-fold cross validation\; Dr.~Kylie Beattie (GlaxoSmithKline) for help with data processing and implementation of alternate pacing protocols\; and Dr.~Michael Clerx and Dr.~Sanmitra Ghosh (University of Oxford) for useful discussions on Hodgkin-Huxley models and model discrepancy.
+The authors would like to thank Dr.~Simon Preston and Dr.~Theo Kypraios (University of Nottingham) for useful discussions on LASSO and K-fold cross validation\; Dr.~Kylie Beattie (GlaxoSmithKline) for help with data processing and implementation of alternate pacing protocols\; and Dr.~Michael Clerx and Dr.~Sanmitra Ghosh (University of Oxford) for useful discussions on Hodgkin-Huxley models and model discrepancy. This study was funded by a Wellcome Trust and Royal Society Sir Henry Dale Fellowship to Dr.~Gary R.~Mirams (grant number 101222/Z/13/Z).
+
+\section{References}
+\bibliographystyle{plain}
+\bibliography{Bibliography}
 
 \end{document}
