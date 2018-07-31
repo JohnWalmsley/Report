@@ -23,18 +23,65 @@
 
 \section{Introduction}
 
-Acquired Long QT syndrome (aLQTS) leading to potentially lethal torsade de pointes arrhythmias has been a rare complication of pharmaceutical treatment with serious consequences for patients, clinicians, regulators and pharmaceutical companies. At present, screening for pro-arrhythmic side effects is performed using the Thorough QT study. This study is extremely sensitive but highly aspecific, leading to the likely removal of many safe compounds at early stages of drug development, increasing costs of development and reducing the number of beneficial compounds that can be taken forwards through the drug development pipeline.
+Acquired Long QT syndrome (aLQTS) leading to potentially lethal torsade de pointes arrhythmias has been a rare complication of pharmaceutical treatment with serious consequences for patients, clinicians, regulators and pharmaceutical companies\cite{Roden2004}. At present, screening for pro-arrhythmic side effects is performed using the Thorough QT study. This study is extremely sensitive but highly aspecific, leading to the likely removal of many safe compounds at early stages of drug development, increasing costs of development and reducing the number of beneficial compounds that can be taken forwards through the drug development pipeline.
 
-In response to the present unsatisfactory situation, the United States Food \& Drug Administration (FDA) has launched the Comprehensive \textit{in vitro} Pharmaceutical Assay (CiPA) project in collaboration with academic researchers, safety pharmacologists and key regulatory bodies. CiPA aims to improve or replace existing screening methods with assays that use computational cardiac cell models representing human cardiac electrophysiology and/or human induced pluripotent stem cell-derived cardiomyocytes. A particular focus of the CiPA project is characterisation of the activation and drug binding kinetics of the hERG channel, which carries the crucial rapidly activating delayed rectifier potassium current (I$_{\text{Kr}}$). I$_{\text{Kr}}$ is a key component of cardiac repolarization and is commonly implicated in aLQTS.
+In response to the present unsatisfactory situation, the United States Food \& Drug Administration (FDA) has launched the Comprehensive \textit{in vitro} Pharmaceutical Assay (CiPA) project in collaboration with academic researchers, safety pharmacologists and key regulatory bodies\footnote{\url{http://cipaproject.org/}}. CiPA aims to improve or replace existing screening methods with assays that use computational cardiac cell models representing human cardiac electrophysiology and/or human induced pluripotent stem cell-derived cardiomyocytes\cite{Colatsky2016}. A particular focus of the CiPA project is characterisation of the activation and drug binding kinetics of the hERG channel, which carries the crucial rapidly activating delayed rectifier potassium current (I$_{\text{Kr}}$). I$_{\text{Kr}}$ is a key component of cardiac repolarization and is commonly implicated in aLQTS.
 
-As part of the CiPA initiative, Beattie \textit{et al} recently published a novel method for fitting hERG channel kinetics on a cell-specific basis that uses a novel `sine wave' voltage clamp protocol as training data to parameterise a simple model of the hERG channel. This model has four `states' and is analogous to the Hodgkin-Huxley potassium current model. The resultant fits produced an excellent qualitative fit to prediction data based on a combination of action potential voltage waveforms. The resultant parameterized model outperformed existing characterisations of IKr extant in the modelling literature with a range of different model structures. Consequently, this new method for characterizing hERG channel kinetics is highly promising for the CiPA project, as it offers a way to characterise recorded kinetics from high-throughput data, while requiring a fraction of the data (and hence recording time) required by long traditional step protocols which can require multiple cells to parameterise adequately, which may be prohibitive for applications which also require characterisation of channel kinetics in presence of pharmaceutical agents.
+As part of the CiPA initiative, Beattie \textit{et al} recently published a novel method for fitting hERG channel kinetics on a cell-specific basis that uses a novel `sine wave' voltage clamp protocol as training data to parameterise a simple model of the hERG channel\cite{Beattie2018}. This model has four `states' and is analogous to the Hodgkin-Huxley potassium current model. The resultant fits produced an excellent qualitative fit to prediction data based on a combination of action potential voltage waveforms. The resultant parameterized model outperformed existing characterisations of IKr extant in the modelling literature with a range of different model structures. Consequently, this new method for characterizing hERG channel kinetics is highly promising for the CiPA project, as it offers a way to characterise recorded kinetics from high-throughput data, while requiring a fraction of the data (and hence recording time) required by long traditional step protocols which can require multiple cells to parameterise adequately, which may be prohibitive for applications which also require characterisation of channel kinetics in presence of pharmaceutical agents.
 
 To advance this promising model parameterisation approach further for application in pharmaceutical development pipelines, several key issues still need to be addressed. Namely 1) can we quantify our certainty in the predictions of the parameterised model, and 2) does the discrepancy between the parameterised model and the experimental data arise due to an inadequate model structure, or an inadequate parameterisation of the model? This report descibes attempts to address these questions using regression methods.
 
-\section{Models of the hERG Channel} \label{}
+\section{Models of the hERG Channel} \label{Sec_ModelsOfHerg}
+
+In this study, we will focus on two formulations of models for hERG. The first is a standard Hodgkin-Huxley model written in a Markov formulation, as used by Beattie et al\cite{Beattie2018},
+\begin{align}
+		\frac{d[C]}{dt}&= -(k_1+k_3)[C] + k_2 [O] + k_4[IC],\\ \label{Eq_dCdt}
+		\frac{d[O]}{dt}&= -(k_2 + k_3 )[O] + k_1 [C] + k_4 [I],
+		, \\
+		\frac{d[I]}{dt}&= -(k_2 + k_4 )[I] + k_3 [O] + k_1 [IC],\\
+		 [IC] &= 1 - ([C] + [O] + [I]),
+\end{align}
+
+where $ \left[ C \right] $ is the closed, $ \left[O \right]$ the open, $\left[ I \right]$ the inactive and $\left[ IC \right]$ the inactive and closed state probability. The rate constants are given by,
+\begin{align}
+k_1 & = P_0 \exp(P_1 V),\\ 
+k_2 & = P_2 \exp( - P_3 V),\\ 
+k_3 & = P_4 \exp(P_5 V),\\
+k_4 & = P_6 \exp(- P_7 V).
+\end{align}
+The current arising from this model is given by,
+\begin{align}
+I & = G [O] (V-V_R), \label{Eq_I_hh}
+\end{align}
+where $G$ is the conductance of the channel, $V$ is the membrane potential and $V_R$ is the Nernst potential for potassium ions, a quantitiy that can be calculated from a patch clamp experiment. For the rest of this report we will label these results using $y_1 = [IC]$, $y_2=[I]$, $y_3 = [O]$ and $y_4 = [C]$ to be consistent with the Matlab code. $k_{ij}$ will denote the transition from state $i$ to state $j$.
+
+Equivalently, the above model can be reformulated as follows,
+\begin{align}
+\frac{dm}{dt} & = \frac{m_{\infty} - m}{\tau_m},\\
+\frac{dh}{dt} & = \frac{h_{\infty} - h}{\tau_h},
+\end{align}
+where, 
+\begin{align}
+m_{\infty} & = \frac{k_1}{k_1+k_2},\\
+\tau_{m} & = \frac{1}{k_1+k_2},\\
+h_{\infty} & = \frac{k_3}{k_3+k_4},\\
+\tau_{h} & = \frac{1}{k_3+k_4},
+\end{align}
+and the current is given by
+\begin{align}
+I & = G m h(V-V_R).
+\end{align}
+An advantage of this formulation is that it allows for more complex forms of the model to be generated quickly using the same equations for $m$ and $h$, for example,
+\begin{align}
+I & = G m^2 h(V-V_R),
+I & = G m^3 h(V-V_R),
+I & = G m^4 h(V-V_R),
+I & = G m^2 h^2(V-V_R). \label{Eq_m2h2}
+\end{align}
+We will return to the latter form of equations in Section \ref{Sec_ModelDiscrepancy}.
 
 
-\section{Definition of Discrepancy} \label{ModelsOfDiscrepancy}
+\section{Definition of Discrepancy} \label{Sec_ModelsOfDiscrepancy}
 \subsection{Simulation discrepancy}
 "Model discrepancy" can be defined in different ways. For the purposes of this project, we will be using two different definitions. The first (in line with the CIPA goals described above) is the discrepancy between the model and the target trace $I_{exp}$, which may be experimental data or some other simulated data. We can sub-divide this definition in terms of how we consider this discrepancy. The first method is very simple:
 \begin{align}
@@ -58,7 +105,7 @@ Because of the singularity around the Nernst potential $V_E$, we need to remove 
 
 
 \subsection{Structural discrepancy}
-Both of the above definitions rely on a particular parameterisation of the model. However, it is also possible to consider the model discrepancy as being the difference between the model and reality. This concept is explained in more detail in \cite{Kennedy2001} and \cite{Strong2014} and refers to the structure of the model rather than its parameterisation.  This definition of model discrepancy refers to model structure, rather than model parameterization (which would change $d$ and $d_o$, above). In the context of hERG modelling, this could be a relatively simple difference, such as the number of closed states in a model or the form of the rate constants. Alternatively, it could be an entirely different feature not preserved in the model of interest - consider the difference between a molecular dynamics simulation of channel opening and a four state Markov model. In this project, we considered this form of discrepancy by fitting four models to the same data and then exploring how their evolution differed in time (Section \ref{}).
+Both of the above definitions rely on a particular parameterisation of the model. However, it is also possible to consider the model discrepancy as being the difference between the model and reality. This concept is explained in more detail in \cite{Kennedy2002} and \cite{Strong2014} and refers to the structure of the model rather than its parameterisation.  This definition of model discrepancy refers to model structure, rather than model parameterization (which would change $d$ and $d_o$, above). In the context of hERG modelling, this could be a relatively simple difference, such as the number of closed states in a model or the form of the rate constants. Alternatively, it could be an entirely different feature not preserved in the model of interest - consider the difference between a molecular dynamics simulation of channel opening and a four state Markov model. In this project, we considered this form of discrepancy by fitting four models to the same data and then exploring how their evolution differed in time (Section \ref{Sec_ModelDiscrepancy}).
 
 \section{Statistical Prediction of Discrepancy}
 
@@ -66,9 +113,9 @@ Both of the above definitions rely on a particular parameterisation of the model
 
 Our goal was to predict simulation discrepancy when using fitted models for prediction. The goal would then be to quantify, based on the training data and the prediction simulation, where and by how much the prediction simulation would differ from the actual experimental trace recorded from that cell, for the prediction protocol. In this report, we use two methods, LASSO and the Matlab method Stepwise Linear Model.
 
-\subsection{Input Variables}
+\subsection{Input Variables}\label{SubSec_Predictors}
 
-As an initial hypothesis, we proposed to use properties derivable from the model equations shown in Eqs. \eqref{}-\eqref{}. These properties are
+As an initial hypothesis, we proposed to use properties derivable from the model equations shown in Eqs.~\eqref{Eq_dCdt}-\eqref{Eq_I_hh}. These properties are
 \begin{itemize}
 \item Variables $y_1$, $y_2$, $y_3$, $y_4$.
 \item Rates $K_{ij}$
@@ -87,7 +134,7 @@ Parameter sensitivities are derived using the following equation \cite{}. Using 
 	\frac{d}{dt}(\frac{\partial y_i}{\partial p_j})   & = \frac{\partial f}{ \partial y_i}\frac{\partial y_i}{ \partial p_j} + \frac{\partial f}{ \partial p_j} \\
 	\frac{d s_{ij}}{dt} & = \frac{\partial f}{ \partial y_i} s_{ij} + \frac{\partial f}{ \partial p_j}
 \end{align}
-The CVODES libraries are used to integrate the parameter sensitivity equations alongside the ODEs in Eqns \eqref{}-\eqref{}.
+The CVODES libraries are used to integrate the parameter sensitivity equations alongside the ODEs in Eqns.~\eqref{Eq_dCdt}-\eqref{Eq_I_hh}.
 
 Before performing any estimation, we check for linear dependence of each set of properties in turn, then check for linear dependence of all the properties that remain. The linear independence check is numerical and performed using the Mathworks File Exchange program getLinearDependent.m. Note that we did not include the derivatives of the variables ($\frac{dy_i}{dt}$) because they are linear combinations of the fluxes.
 
@@ -113,7 +160,7 @@ The size of the parameter $\lambda$ determines the degree of regularization. Ess
 
 One challenge of the LASSO method is that there is no a priori choice for the regularization parameter $\lambda$. To determine $\lambda$ and check the validity of the resulting models we use K-fold cross-validation. This method works by splitting the experimental data into K equally sized folds, leaving one out, then checking the model's ability to predict the data in the left out fold. This results in a mean squared error (MSE) for each fold, and for each value of $\lambda$. The variation in the MSE at each $lambda$ can be used to select $\lambda$ and hence, the model. To do so, we find the $\lambda$ value giving the minimum MSE, and then choose the largest $\lambda$ within one standard deviation from this point. This can be seen as choosing the smallest justifiable  model within the variation of the model that gives the absolute minium error. In this study, we use 10 folds which is a fairly standard choice.
 
-An important property of K-fold cross-validation as inplemented in Matlab is that it uses random data points in each fold. While this is in principle a good thing, the extremely high time resolution of our data means that all of the resulting folds are likely to  be effectively the same, subject to experimental noise (see Fig.~\ref{}). As a result, the models produced by the Matlab algorithm were both non-predictive and non-deterministic. To correct for this phenomenon and produce meaningful folds, some editing of the Matlab source code is required (detailed in README.md). We instead split the trace into ten equal segments consecutive in time to ensure variation between folds.
+An important property of K-fold cross-validation as inplemented in Matlab is that it uses random data points in each fold. While this is in principle a good thing, the extremely high time resolution of our data means that all of the resulting folds are likely to be effectively the same, subject to experimental noise. As a result, the models produced by the Matlab algorithm were both non-predictive and non-deterministic. To correct for this phenomenon and produce meaningful folds, some editing of the Matlab source code is required (detailed in README.md). We instead split the trace into ten equal segments consecutive in time to ensure variation between folds.
 
 \subsubsection{Results}
 
@@ -353,7 +400,7 @@ To investigate what the `best possible' model would look like, we also construct
 
 \subsection{Predicting Discrepancy Using Stepwise Linear Model}\label{SubSec_StepwiseLM_Discrepancy}
 \subsubsection{The Method}
-Stepwise Linear Model (StepwiseLM) is a Matlab method for constructing linear models using a stepwise approach\footnote{\url{https://www.mathworks.com/help/stats/stepwiselm.html}}. The method includes predictors in a stepwise manner by first building  up a model by examining all non-included predictors, checking if any have a value below a set entrance tolerance, then including the predictor with the smallest value in the model. Once no more terms can be added to the model, the reverse process is applied and terms are removed from the model if they exceed a removal value. Further terms are then added as before. The final model is then produced when no more predictors can be removed from the model. The method also allows for higher order terms such as interactions and quadratic terms. Initial experiments showed that this approach led to high degrees of overfitting and so was rejected. A number of criteria are available for setting the threshold for including predictors into the model\cite{Wasserman2004}, being
+Stepwise Linear Model (StepwiseLM) is a Matlab method for constructing linear models using a stepwise approach\footnote{\url{https://www.mathworks.com/help/stats/stepwiselm.html}}. The method includes predictors in a stepwise manner by first building  up a model by examining all non-included predictors, checking if any have a value below a set entrance tolerance, then including the predictor with the smallest value in the model. Once no more terms can be added to the model, the reverse process is applied and terms are removed from the model if they exceed a removal value. Further terms are then added as before. The final model is then produced when no more predictors can be removed from the model. The method also allows for higher order terms such as interactions and quadratic terms. Initial experiments showed that this approach led to high degrees of overfitting and so was rejected. A number of criteria are available for setting the threshold for including predictors into the model\cite{Wasserman2010}, being
 \begin{itemize}
 \item $F$-test of the change in the sum of squared error 
 \item Aikake Information Criterion (AIC), $\mathcal{l}S-|S|$ where $\mathcal{l}S$ is the log-likelihood of the model $S$ evaluated at the maximum likelihood estimate, and $|S|$ is the number of predictors in the model.
@@ -366,7 +413,7 @@ For the plots in Section \ref{SubSubSec_StepwiseLM_Results}, we used AIC with th
 The StepwiseLM method has the appealing feature that it can include polynomial interaction terms to arbitrary order, for example interactions ($X_iX_j$) or quadratic terms ($X_i^2$). Preliminary experiments found that these methods resulted in an enormous degree of overfitting and very poor prediction. Consequently, they have been omitted from this report.
 
 \subsubsection{Results}\label{SubSubSec_StepwiseLM_Results}
-This section shows the same data as for the LASSO results shown above in Section \ref{}. Because stepwiselm does not use regularization, no lambda plots are shown. In general, the model tended to overfit, rather than underfit as for LASSO. As a result, the general trend is for a reasonable fit to the training data but a poor fit during prediction.
+This section shows the same data as for the LASSO results shown above in Section \ref{SubSec_Lasso_Discrepancy}. Because stepwiselm does not use regularization, no lambda plots are shown. In general, the model tended to overfit, rather than underfit as for LASSO. As a result, the general trend is for a reasonable fit to the training data but a poor fit during prediction.
 
 \begin{figure}[t]
 \begin{center}
@@ -534,15 +581,33 @@ This section shows the same data as for the LASSO results shown above in Section
 
 \clearpage
 
-
 \subsection{Artificial Data}
 Given the disappointing results in Sections \ref{SubSec_Lasso_Discrepancy} and \ref{SubSec_StepwiseLM_Discrepancy} above, we performed a set of test studies to determine how well the methods could be expected to perform under these circumstances. The first test was to use the AP trace for training, thereby determining an `optimal' model - this approach places a bound on the quality of the fit that should be expected from the method applied - it is constructing a model using the prediction data as shown above. 
 
-The second method we used to determine how effective the methods were likely to be was to generate artificial data. In this approach, we assume that our central hypothesis is true and that the discrepancy between the model and the data can be represented by a linear sum of the model-derived predictors in Section~\ref{}. `Discrepancies' are generated by firstly choosing a random number of $n$ predictors between 1 and 20, and then randomly selecting $n$ predictors. These predictors are then summed with a constant linear coefficient so that the magnitude is comparable to the magnitude of the $d$ trace. Finally, Gaussian noise with mean 0 and standard deviation from the first 1000 time points in the $d$ trace is applied. The process was repeated in the absence of noise. Two examples constructed using LASSO are shown in Figs.~\ref{}-\ref{}. We repeated this process 100 times and then recorded the relationship between the number of parameters in the model and the MSE between the true model's coefficients and the fitted model's coefficients. Non-included predictors were treated as having a coefficient value of zero. The results are shown in Fig.~\ref{}, showing that the more parameters are included in the target model, the less likely the model is to be correct. Consequently, large models produced through this fitting method are unlikely to be reliable, consistent with the results shown when using the experimental data in the previous section.
+The second method we used to determine how effective the methods were likely to be was to generate artificial data. In this approach, we assume that our central hypothesis is true and that the discrepancy between the model and the data can be represented by a linear sum of the model-derived predictors in Section~\ref{SubSec_Predictors}. `Discrepancies' are generated by firstly choosing a random number of $n$ predictors between 1 and 20, and then randomly selecting $n$ predictors. These predictors are then summed with a constant linear coefficient so that the magnitude is comparable to the magnitude of the $d$ trace. Finally, Gaussian noise with mean 0 and standard deviation from the first 1000 time points in the $d$ trace is applied. The process was repeated in the absence of noise. Two examples constructed using LASSO are shown in Figs.~\ref{Fig_LassoArtificialExample}. We repeated this process 20 times and then recorded the relationship between the number of parameters in the model and the MSE between the true model's coefficients and the fitted model's coefficients. Non-included predictors were treated as having a coefficient value of zero. The results are shown in Fig.~\ref{Fig_BatchArtificialFits}, showing that the more parameters are included in the target model, the less likely the model is to be correct. Consequently, large models produced through this fitting method are unlikely to be reliable, consistent with the results shown when using the experimental data in the previous section.
+
+\begin{figure}[t]
+\begin{center}
+\includegraphics[scale=0.42]{Figures/LassoArtificialExample1_TrainingVsPrediction.png} \hspace{1cm}
+\includegraphics[scale=0.21]{Figures/LassoArtificialExample1_Coeffs.png} \newline \newline
+\includegraphics[scale=0.42]{Figures/LassoArtificialExample2_TrainingVsPrediction.png} \hspace{1cm}
+\includegraphics[scale=0.21]{Figures/LassoArtificialExample2_Coeffs.png}
+\caption{\textbf{Example fits using LASSO to artificial data}. The fit of the model to the artificial data is shown on the left, and the coeffcicients in the constructed model and the original model are shown on the right.} 
+\label{Fig_LassoArtificialExample}
+\end{center}
+\end{figure}
+
+\begin{figure}[bt]
+\begin{center}
+\includegraphics[scale=0.42]{Figures/BatchFitToData.png}
+\caption{\textbf{Effectiveness of LASSO and StepwiseLM at recovering artificial data}. The MSE between the original coefficients constructing the artificial model, and the coefficients of the fitted linear model is shown on the y axis, and the number of parameters included in the artificial model is shown on the x-axis. The left panel shows the results for LASSO and the right panel shows the results for StepwiseLM.} 
+\label{Fig_BatchArtificialFits}
+\end{center}
+\end{figure}
 
 \subsection{Conclusions}
 
-The LASSO method tended to produce very small models, particularly for $d_o$. These models were not capable of predicting the discrepancy in the AP trace, even though the analysis in Fig.~\ref{} suggests that they ought to be relatively reliable if they were detecting a real signal. The fact that these models are unreliable is consistent with them being inaccurate. It is notable that the difference between the folds in most cases is large relative to the MSE, which would suggest that the model is not particularly effective for prediction even within the training data, and explains why very small models tended to be chosen - the LASSO method could not conclude that the larger model with the smallest overall MSE was definitely better than a sparse model. This shows the value of K-fold cross-validation on the training data in any future application of similar methods. Conversely, StepwiseLM tended to produce large linear models which are likely to be untrustworthy based on the simulated data examples in Fig.~\ref{}. Their lack of predictive function supports this view. We also note that the small discrepancy between the original parameterized model and the experimental data does not seem to be the source of the problem - in the cases where alternative protocols (EP, MWDD, OSW) were used to fit the linear model, the result tended to be worse than for the SW protocol.
+The LASSO method tended to produce very small models, particularly for $d_o$. These models were not capable of predicting the discrepancy in the AP trace, even though the analysis in Fig.~\ref{Fig_BatchArtificialFits} suggests that they ought to be relatively reliable if they were detecting a real signal. The fact that these models are unreliable is consistent with them being inaccurate. It is notable that the difference between the folds in most cases is large relative to the MSE, which would suggest that the model is not particularly effective for prediction even within the training data, and explains why very small models tended to be chosen - the LASSO method could not conclude that the larger model with the smallest overall MSE was definitely better than a sparse model. This shows the value of K-fold cross-validation on the training data in any future application of similar methods. Conversely, StepwiseLM tended to produce large linear models which are likely to be untrustworthy based on the simulated data examples in Fig.~\ref{Fig_BatchArtificialFits}. Their lack of predictive function supports this view. We also note that the small discrepancy between the original parameterized model and the experimental data does not seem to be the source of the problem - in the cases where alternative protocols (EP, MWDD, OSW) were used to fit the linear model, the result tended to be worse than for the SW protocol.
 
 It is striking that the two different methods, over multiple different datasets, are very rarely consistent in the predictors they include in the model, either between datasets or between methods. This finding further indicates that a true structural source for the discrepancy is not being successfully identified, as if a source of error were to exist amongst these variables it would be expected to be consistently included. It is also instructive to note that in the two cases where the model was constructed from the prediction data (AP protocol), the error could be reduced to a magnitude comparable to that in the SW protocol data prior to fitting. This is encouraging at first sight. However, the two constructed models are completely different and both very large. Furthermore, the error is much lower in StepwiseLM than LASSO, which may suggest a better model, or alternatively overfititng due to the lack of K-fold cross validation.
 
@@ -550,14 +615,13 @@ Based on the results shown above, we conclude that straightforward linear regres
 
 \section{Parameter Fits Using Alternate Protocols}
 
-\section{Discrepancy Between Alternate Model Structures}
+\section{Discrepancy Between Alternate Model Structures}\label{Sec_ModelDiscrepancy}
 
 \section{Future Work}\label{Sec_FutureWork}
 
 \section{Acknowledgements}
-The authors would like to thank Dr.~Simon Preston and Dr.~Theo Kypraios (University of Nottingham) for useful discussions on LASSO and K-fold cross validation\; Dr.~Kylie Beattie (GlaxoSmithKline) for help with data processing and implementation of alternate pacing protocols\; and Dr.~Michael Clerx and Dr.~Sanmitra Ghosh (University of Oxford) for useful discussions on Hodgkin-Huxley models and model discrepancy. This study was funded by a Wellcome Trust and Royal Society Sir Henry Dale Fellowship to Dr.~Gary R.~Mirams (grant number 101222/Z/13/Z).
+The authors would like to thank Dr.~Simon Preston and Dr.~Theo Kypraios (University of Nottingham) for useful discussions on LASSO and K-fold cross validation; Dr.~Kylie Beattie (GlaxoSmithKline) for help with data processing and implementation of alternate pacing protocols; and Dr.~Michael Clerx and Dr.~Sanmitra Ghosh (University of Oxford) for useful discussions on Hodgkin-Huxley models and model discrepancy. This study was funded by a Wellcome Trust and Royal Society Sir Henry Dale Fellowship to Dr.~Gary R.~Mirams (grant number 101222/Z/13/Z).
 
-\section{References}
 \bibliographystyle{plain}
 \bibliography{Bibliography}
 
